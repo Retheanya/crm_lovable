@@ -1,0 +1,80 @@
+{
+  "info": {
+    "name": "CRM Backend API",
+    "description": "Postman Collection for CRM application",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@crm.com\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leads",
+      "item": [
+        {
+          "name": "Get Leads",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/leads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "leads"]
+            }
+          }
+        },
+        {
+          "name": "Create Lead",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leadName\": \"John Doe\",\n  \"companyName\": \"Acme Corp\",\n  \"phoneNumber\": \"1234567890\",\n  \"location\": \"New York\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/leads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "leads"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_JWT_TOKEN"
+    }
+  ]
+}

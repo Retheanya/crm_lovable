@@ -1,0 +1,11 @@
+# Files/folders excluded from the Vercel deployment bundle
+
+node_modules
+.env
+*.log
+combined.log
+error.log
+clean_db.js
+test_*.js
+verify-workflow.js
+crm-postman-collection.json

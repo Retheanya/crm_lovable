@@ -1,0 +1,202 @@
+--- END-TO-END CRUD PERSISTENCE AUDIT ---
+
+### 1. CREATE LEAD
+BEFORE DB: No document exists yet.
+API Request Payload (POST /leads):
+{
+  "leadName": "Audit Test Lead",
+  "companyName": "Audit Corp",
+  "phoneNumber": "555-000-9221",
+  "location": "Mumbai, India",
+  "source": "Website",
+  "status": "New",
+  "value": 5000,
+  "notes": "Audit test notes"
+}
+API Response:
+{
+  "success": true,
+  "data": {
+    "_id": "6a38b07cf7fe818614dedf57",
+    "leadName": "Audit Test Lead",
+    "companyName": "Audit Corp",
+    "phoneNumber": "555-000-9221",
+    "location": "Mumbai, India",
+    "status": "New",
+    "source": "Website",
+    "assignedUser": null,
+    "value": 5000,
+    "notes": "Audit test notes",
+    "createdBy": {
+      "_id": "6a36908ded9fd78d00d0520f",
+      "name": "Super Admin",
+      "email": "superadmin@crm.com"
+    },
+    "isDeleted": false,
+    "createdAt": "2026-06-22T03:48:12.895Z",
+    "updatedAt": "2026-06-22T03:48:12.895Z",
+    "__v": 0
+  }
+}
+AFTER DB Document:
+{
+  "_id": "6a38b07cf7fe818614dedf57",
+  "leadName": "Audit Test Lead",
+  "companyName": "Audit Corp",
+  "phoneNumber": "555-000-9221",
+  "location": "Mumbai, India",
+  "status": "New",
+  "source": "Website",
+  "assignedUser": null,
+  "value": 5000,
+  "notes": "Audit test notes",
+  "createdBy": "6a36908ded9fd78d00d0520f",
+  "isDeleted": false,
+  "createdAt": "2026-06-22T03:48:12.895Z",
+  "updatedAt": "2026-06-22T03:48:12.895Z",
+  "__v": 0
+}
+
+### 2. UPDATE LEAD
+BEFORE DB:
+{
+  "leadName": "Audit Test Lead",
+  "value": 5000,
+  "location": "Mumbai, India",
+  "updatedAt": "2026-06-22T03:48:12.895Z"
+}
+API Request Payload (PUT /leads/6a38b07cf7fe818614dedf57):
+{
+  "leadName": "Audit Test Lead Updated",
+  "value": 10000,
+  "location": "Delhi, India"
+}
+API Response:
+{
+  "success": true,
+  "data": {
+    "_id": "6a38b07cf7fe818614dedf57",
+    "leadName": "Audit Test Lead Updated",
+    "companyName": "Audit Corp",
+    "phoneNumber": "555-000-9221",
+    "location": "Delhi, India",
+    "status": "New",
+    "source": "Website",
+    "assignedUser": null,
+    "value": 10000,
+    "notes": "Audit test notes",
+    "createdBy": {
+      "_id": "6a36908ded9fd78d00d0520f",
+      "name": "Super Admin",
+      "email": "superadmin@crm.com"
+    },
+    "isDeleted": false,
+    "createdAt": "2026-06-22T03:48:12.895Z",
+    "updatedAt": "2026-06-22T03:48:13.587Z",
+    "__v": 0
+  }
+}
+AFTER DB:
+{
+  "leadName": "Audit Test Lead Updated",
+  "value": 10000,
+  "location": "Delhi, India",
+  "updatedAt": "2026-06-22T03:48:13.587Z"
+}
+
+### 3. STATUS CHANGE
+BEFORE DB Status: New
+API Request Payload (PATCH /leads/6a38b07cf7fe818614dedf57/status):
+{
+  "status": "Follow-Up"
+}
+API Response:
+{
+  "success": true,
+  "data": {
+    "_id": "6a38b07cf7fe818614dedf57",
+    "leadName": "Audit Test Lead Updated",
+    "companyName": "Audit Corp",
+    "phoneNumber": "555-000-9221",
+    "location": "Delhi, India",
+    "status": "Follow-Up",
+    "source": "Website",
+    "assignedUser": null,
+    "value": 10000,
+    "notes": "Audit test notes",
+    "createdBy": {
+      "_id": "6a36908ded9fd78d00d0520f",
+      "name": "Super Admin",
+      "email": "superadmin@crm.com"
+    },
+    "isDeleted": false,
+    "createdAt": "2026-06-22T03:48:12.895Z",
+    "updatedAt": "2026-06-22T03:48:14.193Z",
+    "__v": 0
+  }
+}
+AFTER DB Status: Follow-Up
+
+### 4. ASSIGN LEAD
+BEFORE DB AssignedUser: null
+API Request Payload (PATCH /leads/6a38b07cf7fe818614dedf57/assign):
+{
+  "assignedUser": "6a36908ded9fd78d00d05210"
+}
+API Response:
+{
+  "success": true,
+  "data": {
+    "_id": "6a38b07cf7fe818614dedf57",
+    "leadName": "Audit Test Lead Updated",
+    "companyName": "Audit Corp",
+    "phoneNumber": "555-000-9221",
+    "location": "Delhi, India",
+    "status": "Follow-Up",
+    "source": "Website",
+    "assignedUser": {
+      "_id": "6a36908ded9fd78d00d05210",
+      "name": "Sales Rep 1",
+      "email": "sales1@crm.com"
+    },
+    "value": 10000,
+    "notes": "Audit test notes",
+    "createdBy": {
+      "_id": "6a36908ded9fd78d00d0520f",
+      "name": "Super Admin",
+      "email": "superadmin@crm.com"
+    },
+    "isDeleted": false,
+    "createdAt": "2026-06-22T03:48:12.895Z",
+    "updatedAt": "2026-06-22T03:48:14.772Z",
+    "__v": 0
+  }
+}
+AFTER DB AssignedUser: 6a36908ded9fd78d00d05210
+
+### 5. DELETE LEAD
+BEFORE DB isDeleted: false
+API Request (DELETE /leads/6a38b07cf7fe818614dedf57)
+API Response:
+{
+  "success": true,
+  "data": {}
+}
+AFTER DB:
+{
+  "_id": "6a38b07cf7fe818614dedf57",
+  "leadName": "Audit Test Lead Updated",
+  "companyName": "Audit Corp",
+  "phoneNumber": "555-000-9221",
+  "location": "Delhi, India",
+  "status": "Follow-Up",
+  "source": "Website",
+  "assignedUser": "6a36908ded9fd78d00d05210",
+  "value": 10000,
+  "notes": "Audit test notes",
+  "createdBy": "6a36908ded9fd78d00d0520f",
+  "isDeleted": true,
+  "createdAt": "2026-06-22T03:48:12.895Z",
+  "updatedAt": "2026-06-22T03:48:15.351Z",
+  "__v": 0
+}
