@@ -23,9 +23,10 @@ const {
   assignLeadSchema
 } = require('../validators/lead.validator');
 const { ROLES } = require('../constants');
+const os = require('os');
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ dest: os.tmpdir() });
 
 router.use(authenticate);
 

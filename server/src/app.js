@@ -11,7 +11,13 @@ const app = express();
 
 // Middlewares
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://plus-crm.netlify.app',
+    'http://localhost:5173'
+  ],
+  credentials: true
+}));
 app.use(helmet());
 
 if (process.env.NODE_ENV === 'development') {
