@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Phone, Calendar, DollarSign, Activity as ActivityIcon, PhoneCall, CalendarClock, Users, Sparkles, X, UserCircle2, MapPin, Target, RefreshCw, PlusCircle, Edit2, StickyNote, CheckCircle, XCircle, Loader2, MessageCircle } from "lucide-react";
+import { Mail, Phone, Calendar, IndianRupee, Activity as ActivityIcon, PhoneCall, CalendarClock, Users, Sparkles, X, UserCircle2, MapPin, Target, RefreshCw, PlusCircle, Edit2, StickyNote, CheckCircle, XCircle, Loader2, MessageCircle, AlertTriangle, Check, Trash2, Edit3, Clock } from "lucide-react";
 import { ApiService } from "@/crm/api";
 import { useCrmSettings } from "@/context/CrmSettingsContext";
 import { statusColor, formatRelative, Lead } from "@/crm/data";
@@ -27,7 +27,8 @@ const getActivityIconAndColor = (type: string, title: string) => {
 export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: string, onClose: () => void, onEdit: (lead: Lead) => void, onUpdate: () => void }) {
   const [lead, setLead] = useState<Lead | null>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [upcomingFollowUps, setUpcomingFollowUps] = useState<any[]>([]);
+  const [followUpsList, setFollowUpsList] = useState<any[]>([]);
+  const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -60,12 +61,13 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
         }).sort((a: any, b: any) => b.rawDate.getTime() - a.rawDate.getTime());
         setHistory(sortedHistory);
         
-        const fuRes = await ApiService.getFollowUps({ leadId: leadId, status: 'PENDING' });
-        setUpcomingFollowUps(fuRes.data.map((fu: any) => ({
+        const fuRes = await ApiService.getFollowUps({ leadId: leadId });
+        setFollowUpsList(fuRes.data.map((fu: any) => ({
           id: fu._id,
           notes: fu.notes,
           due: fu.followUpDate,
-          status: fu.status
+          status: fu.status,
+          priority: fu.priority || 'MEDIUM'
         })).sort((a: any, b: any) => new Date(a.due).getTime() - new Date(b.due).getTime()));
       } catch (err) {
         console.error("Failed to fetch lead details", err);
@@ -161,11 +163,13 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
       const notes = formData.get('notes') as string;
 
       // Optimistic append to history
-      const { icon, tint, color } = getActivityIconAndColor('Follow-up Scheduled', notes);
+      const priority = formData.get('priority') as string || 'MEDIUM';
+      const detailStr = `Priority: ${priority}\nScheduled: ${new Date(due).toLocaleString()}\nNotes:\n${notes}`;
+      const { icon, tint, color } = getActivityIconAndColor('Follow-up Scheduled', detailStr);
       const optimisticActivity = {
         id: Date.now().toString(),
         title: 'Follow-up Scheduled',
-        detail: notes,
+        detail: detailStr,
         who: "You",
         rawDate: new Date(),
         whenFull: new Date().toLocaleString(),
@@ -174,18 +178,20 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
       };
       setHistory(prev => [optimisticActivity, ...prev]);
 
-      // Optimistic append to upcoming
+      // Optimistic append
       const optimisticFollowup = {
         id: Date.now().toString(),
         due,
         notes,
-        status: 'PENDING'
+        status: 'PENDING',
+        priority: formData.get('priority') as string || 'MEDIUM'
       };
-      setUpcomingFollowUps(prev => [...prev, optimisticFollowup].sort((a: any, b: any) => new Date(a.due).getTime() - new Date(b.due).getTime()));
+      setFollowUpsList(prev => [...prev, optimisticFollowup].sort((a: any, b: any) => new Date(a.due).getTime() - new Date(b.due).getTime()));
 
       await ApiService.createFollowUp(lead.id, {
         due,
         notes,
+        priority: formData.get('priority') as string,
       });
       (e.target as HTMLFormElement).reset();
       
@@ -197,6 +203,49 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
       setRefreshCount(c => c + 1);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdateFollowUp = async (id: string, updates: any) => {
+    try {
+      // Optimistic UI update
+      setFollowUpsList(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+      
+      if (updates.status === 'COMPLETED' || updates.status === 'CANCELLED' || updates.followUpDate) {
+        const target = followUpsList.find(f => f.id === id);
+        let title = 'Follow-up Updated';
+        let detailStr = '';
+        if (updates.status === 'COMPLETED') {
+          title = 'Follow-up Completed';
+          detailStr = `Priority: ${target?.priority || 'MEDIUM'}\nCompleted Date: ${new Date().toLocaleString()}`;
+        } else if (updates.status === 'CANCELLED') {
+          title = 'Follow-up Cancelled';
+          detailStr = `Priority: ${target?.priority || 'MEDIUM'}\nScheduled Date: ${new Date(target?.due || Date.now()).toLocaleString()}\nCancellation status: Cancelled`;
+        } else if (updates.followUpDate) {
+          title = 'Follow-up Rescheduled';
+          detailStr = `${new Date(target?.due || Date.now()).toLocaleString()} → ${new Date(updates.followUpDate).toLocaleString()}`;
+        }
+
+        const { icon, tint, color } = getActivityIconAndColor(title, detailStr);
+        setHistory(prev => [{
+          id: Date.now().toString(),
+          title,
+          detail: detailStr,
+          who: "You",
+          rawDate: new Date(),
+          whenFull: new Date().toLocaleString(),
+          whenRelative: "Just now",
+          icon, tint, color
+        }, ...prev]);
+      }
+
+      await ApiService.updateFollowUp(id, updates);
+      toast.success("Follow-up updated");
+      setRefreshCount(c => c + 1);
+      onUpdate();
+    } catch (err) {
+      toast.error("Failed to update follow-up");
+      setRefreshCount(c => c + 1);
     }
   };
 
@@ -218,7 +267,7 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
            <h3 className="text-[16px] font-bold text-foreground">Quick View</h3>
-           {isRefreshing && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" title="Syncing..." />}
+           {isRefreshing && <span title="Syncing..."><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /></span>}
         </div>
         <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted transition-colors hover:text-foreground">
           <X className="h-4 w-4" />
@@ -241,7 +290,7 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
           
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-border bg-card p-3 shadow-sm hover:shadow-md transition-shadow">
-               <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 mb-1.5"><DollarSign className="h-3.5 w-3.5 text-emerald-600"/> Value</label>
+               <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 mb-1.5"><IndianRupee className="h-3.5 w-3.5 text-emerald-600"/> Value</label>
                <p className="text-[14px] font-bold text-foreground">₹{lead.value.toLocaleString()}</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-3 shadow-sm hover:shadow-md transition-shadow">
@@ -342,7 +391,7 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
                           <p className="text-[14px] font-bold text-foreground leading-none">{h.title}</p>
                           <p className="text-[12px] font-bold text-muted-foreground cursor-help" title={h.whenFull}>{h.whenRelative}</p>
                         </div>
-                        <p className="mt-1.5 text-[13.5px] text-muted-foreground leading-snug break-words">{h.detail}</p>
+                        <p className="mt-1.5 text-[13.5px] text-muted-foreground leading-snug break-words whitespace-pre-wrap">{h.detail}</p>
                         {h.who !== "System" && (
                           <div className="mt-3 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                             <div className="grid h-5 w-5 place-items-center rounded-full bg-muted text-[9px] font-bold text-muted-foreground shrink-0 uppercase">
@@ -416,24 +465,70 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
 
             {activeTab === "followup" && (
               <div className="animate-in fade-in duration-200 flex flex-col h-full">
-                {upcomingFollowUps.length > 0 && (
+                {followUpsList.length > 0 && (
                   <div className="mb-5 space-y-2.5">
                     <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center justify-between">
-                      Upcoming Follow-Ups
-                      <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-bold">{upcomingFollowUps.length}</span>
+                      Follow-Ups
+                      <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-bold">{followUpsList.length}</span>
                     </h5>
-                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
-                      {upcomingFollowUps.map(f => {
-                        const isOverdue = new Date(f.due).getTime() < Date.now();
+                    <div className="space-y-4 max-h-[180px] overflow-y-auto pr-1 scrollbar-thin">
+                      {['OVERDUE', 'UPCOMING', 'COMPLETED'].map(group => {
+                        const items = followUpsList.filter(f => {
+                          if (group === 'COMPLETED') return f.status === 'COMPLETED';
+                          const isPast = new Date(f.due).getTime() < Date.now();
+                          if (group === 'OVERDUE') return (f.status === 'PENDING' || f.status === 'MISSED') && isPast;
+                          return f.status === 'PENDING' && !isPast;
+                        });
+                        if (items.length === 0) return null;
+                        
                         return (
-                          <div key={f.id} className={`rounded-xl border p-3 flex gap-3 items-start shadow-sm transition-colors ${isOverdue ? 'border-red-200 bg-red-50/50 hover:bg-red-50' : 'border-orange-200 bg-orange-50/50 hover:bg-orange-50'}`}>
-                            <CalendarClock className={`h-4 w-4 shrink-0 mt-0.5 ${isOverdue ? 'text-red-500' : 'text-orange-500'}`} />
-                            <div>
-                              <p className={`text-[13px] font-semibold leading-snug ${isOverdue ? 'text-red-900' : 'text-orange-900'}`}>{f.notes}</p>
-                              <p className={`text-[11px] font-bold mt-1 ${isOverdue ? 'text-red-600' : 'text-orange-600'}`}>{new Date(f.due).toLocaleString()} {isOverdue && '(Overdue)'}</p>
-                            </div>
+                          <div key={group} className="space-y-2">
+                            <h6 className={`text-[10px] font-bold uppercase tracking-wider ${group === 'OVERDUE' ? 'text-red-600' : group === 'COMPLETED' ? 'text-emerald-600' : 'text-orange-600'}`}>{group}</h6>
+                            {items.map(f => (
+                              <div key={f.id} className={`rounded-xl border p-3 flex flex-col gap-2 shadow-sm transition-colors ${group === 'OVERDUE' ? 'border-red-200 bg-red-50/50 hover:bg-red-50' : group === 'COMPLETED' ? 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50' : 'border-orange-200 bg-orange-50/50 hover:bg-orange-50'}`}>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex gap-2 items-start">
+                                    <CalendarClock className={`h-4 w-4 shrink-0 mt-0.5 ${group === 'OVERDUE' ? 'text-red-500' : group === 'COMPLETED' ? 'text-emerald-500' : 'text-orange-500'}`} />
+                                    <div>
+                                      <p className={`text-[13px] font-semibold leading-snug ${group === 'OVERDUE' ? 'text-red-900' : group === 'COMPLETED' ? 'text-emerald-900' : 'text-orange-900'}`}>{f.notes}</p>
+                                      <p className={`text-[11px] font-bold mt-1 ${group === 'OVERDUE' ? 'text-red-600' : group === 'COMPLETED' ? 'text-emerald-600' : 'text-orange-600'}`}>{new Date(f.due).toLocaleString()}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase ${f.priority === 'HIGH' ? 'bg-red-100 text-red-700' : f.priority === 'LOW' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-700'}`}>{f.priority}</span>
+                                </div>
+                                {editingFollowUpId === f.id ? (
+                                  <div className="flex flex-col gap-2 mt-2">
+                                    <input type="datetime-local" id={`date-${f.id}`} defaultValue={f.due.slice(0,16)} className="h-8 text-[11px] rounded border px-2 w-full" />
+                                    <div className="flex gap-2">
+                                      <button type="button" onClick={() => {
+                                        const newVal = (document.getElementById(`date-${f.id}`) as HTMLInputElement).value;
+                                        if (newVal) {
+                                          handleUpdateFollowUp(f.id, { followUpDate: newVal });
+                                          setEditingFollowUpId(null);
+                                        }
+                                      }} className="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-bold">Save</button>
+                                      <button type="button" onClick={() => setEditingFollowUpId(null)} className="bg-slate-200 text-slate-700 text-[10px] px-2 py-1 rounded font-bold">Cancel</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  (f.status === 'PENDING' || f.status === 'MISSED') && (
+                                    <div className="flex gap-2 mt-2 pt-2 border-t border-black/5">
+                                      <button type="button" onClick={() => handleUpdateFollowUp(f.id, { status: 'COMPLETED' })} className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-100/50 hover:bg-emerald-100 px-2 py-1 rounded">
+                                        <Check className="h-3 w-3" /> Complete
+                                      </button>
+                                      <button type="button" onClick={() => setEditingFollowUpId(f.id)} className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-100/50 hover:bg-blue-100 px-2 py-1 rounded">
+                                        <Clock className="h-3 w-3" /> Reschedule
+                                      </button>
+                                      <button type="button" onClick={() => handleUpdateFollowUp(f.id, { status: 'CANCELLED' })} className="flex items-center gap-1 text-[10px] font-bold text-red-600 hover:text-red-700 bg-red-100/50 hover:bg-red-100 px-2 py-1 rounded ml-auto">
+                                        <Trash2 className="h-3 w-3" /> Cancel
+                                      </button>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        )
+                        );
                       })}
                     </div>
                   </div>
@@ -448,6 +543,14 @@ export function LeadQuickView({ leadId, onClose, onEdit, onUpdate }: { leadId: s
                          <CalendarClock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                          <input name="due" required type="datetime-local" className="h-9 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-[13px] outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 hover:border-border/80" />
                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-foreground uppercase tracking-wider">Priority</label>
+                      <select name="priority" className="h-9 w-full rounded-lg border border-input bg-card px-3 text-[13px] outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 hover:border-border/80">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" defaultValue="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                      </select>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-foreground uppercase tracking-wider">Reminder Note <span className="text-red-500">*</span></label>

@@ -233,8 +233,8 @@ export function AppLayout() {
                           <p className="text-[12px] text-muted-foreground mt-0.5 line-clamp-2">{n.description}</p>
                           <div className="mt-1.5 flex items-center justify-between">
                             <Link 
-                              to="/leads/$id" 
-                              params={{ id: n.leadId }}
+                              to="/leads" 
+                              search={{ expanded: n.leadId } as any}
                               onClick={() => setNotifDropdownOpen(false)}
                               className="text-[12px] font-medium text-[#2563eb] hover:underline"
                             >
@@ -603,8 +603,8 @@ function AllNotificationsModal() {
                 <p className="text-[13px] text-muted-foreground mt-1">{n.description}</p>
                 <div className="mt-2 flex items-center justify-between">
                   <Link 
-                    to="/leads/$id" 
-                    params={{ id: n.leadId }}
+                    to="/leads" 
+                    search={{ expanded: n.leadId } as any}
                     onClick={() => (document.getElementById('all-notifications-modal') as HTMLDialogElement)?.close()}
                     className="text-[13px] font-medium text-[#2563eb] hover:underline"
                   >

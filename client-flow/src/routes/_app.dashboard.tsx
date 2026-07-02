@@ -234,7 +234,7 @@ function InteractiveStatusSelect({ lead, baseClass }: { lead: any, baseClass: st
 function Dashboard() {
   const { statuses, sources } = useCrmSettings();
   const { user } = useAuth();
-  const [recentLeadsFilter, setRecentLeadsFilter] = useState("This Week");
+  const [recentLeadsFilter, setRecentLeadsFilter] = useState("All Time");
   const [timeframe, setTimeframe] = useState("This Month");
   const [pipelineRange, setPipelineRange] = useState("weekly");
   const [summary, setSummary] = useState<any>(null);
@@ -303,7 +303,7 @@ function Dashboard() {
     return true;
   });
 
-  const recentLeadsMapped = filteredLeads.slice(0, 10).map((l, index) => {
+  const recentLeadsMapped = filteredLeads.slice(0, 5).map((l, index) => {
     const score = 60 + (index * 7 + l.name.length * 3) % 40; 
     const scoreColor = score > 80 ? "#22c55e" : score > 60 ? "#f97316" : "#ef4444";
     return {
@@ -511,7 +511,7 @@ function Dashboard() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Link to="/leads/$id" params={{ id: l.id }} className="font-bold text-[#1e293b] hover:underline">{l.name}</Link>
+                      <Link to="/leads" search={{ expanded: l.id } as any} className="font-bold text-[#1e293b] hover:underline">{l.name}</Link>
                       <span className="text-[12px] text-[#64748b]">· {l.company}</span>
                       <div className="relative inline-block">
                         <InteractiveStatusSelect lead={l} baseClass="appearance-none cursor-pointer border-none outline-none rounded-full px-2 py-0.5 pr-5 text-[11px] font-bold bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-[right_4px_center] bg-no-repeat" />
@@ -552,7 +552,7 @@ function Dashboard() {
                 {recentLeadsMapped.map((l) => (
                   <tr key={l.id} className="border-b border-border last:border-0 transition-colors hover:bg-muted/40">
                     <td className="px-5 py-3">
-                      <Link to="/leads/$id" params={{ id: l.id }} className="flex items-center gap-3">
+                      <Link to="/leads" search={{ expanded: l.id } as any} className="flex items-center gap-3">
                         <div className="grid h-9 w-9 place-items-center rounded-full bg-[var(--tint-blue)] text-[12px] font-semibold text-[#1d4ed8]">
                           {l.avatar}
                         </div>
@@ -615,7 +615,7 @@ function Dashboard() {
                         </div>
                         <p className="mt-0.5 text-[13px] text-[#475569] line-clamp-2">{log.description}</p>
                         <div className="mt-1 flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                          <Link to="/leads/$id" params={{ id: log.leadId?._id || '1' }} className="font-medium text-[#2563eb] hover:underline">
+                          <Link to="/leads" search={{ expanded: log.leadId?._id || '1' } as any} className="font-medium text-[#2563eb] hover:underline">
                             {log.leadId?.leadName || 'Leads'}
                           </Link>
                           <span>•</span>

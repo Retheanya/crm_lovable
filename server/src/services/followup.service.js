@@ -27,7 +27,7 @@ class FollowUpService {
     await activityRepository.create({
       leadId,
       activityType: ACTIVITY_TYPES.FOLLOWUP_ADDED,
-      description: `Added follow-up for ${new Date(data.followUpDate).toLocaleDateString()}`,
+      description: `Priority: ${followUpData.priority || 'MEDIUM'}\nScheduled: ${new Date(data.followUpDate).toLocaleString()}\nNotes:\n${data.notes || ''}`.trim(),
       performedBy: user._id
     });
 
@@ -58,10 +58,38 @@ class FollowUpService {
 
     const updatedFollowUp = await followupRepository.update(id, data);
 
+    let descriptionLines = [];
+    if (data.status === 'COMPLETED') {
+      descriptionLines.push(`Priority: ${followUp.priority}`);
+      descriptionLines.push(`Completed Date: ${new Date().toLocaleString()}`);
+    } else if (data.status === 'CANCELLED') {
+      descriptionLines.push(`Priority: ${followUp.priority}`);
+      descriptionLines.push(`Scheduled Date: ${new Date(followUp.followUpDate).toLocaleString()}`);
+      descriptionLines.push(`Cancellation status: Cancelled`);
+    } else {
+      let changed = false;
+      if (data.followUpDate && new Date(data.followUpDate).getTime() !== new Date(followUp.followUpDate).getTime()) {
+        descriptionLines.push(`${new Date(followUp.followUpDate).toLocaleString()} → ${new Date(data.followUpDate).toLocaleString()}`);
+        changed = true;
+      }
+      if (data.priority && data.priority !== followUp.priority) {
+        descriptionLines.push(`${followUp.priority} → ${data.priority}`);
+        changed = true;
+      }
+      if (data.notes && data.notes !== followUp.notes) {
+        descriptionLines.push(`Notes:\n${data.notes}`);
+        changed = true;
+      }
+      if (!changed && data.status) {
+        descriptionLines.push(`Status changed to ${data.status}`);
+      }
+    }
+    const description = descriptionLines.join('\n');
+
     await activityRepository.create({
       leadId: followUp.leadId,
       activityType: ACTIVITY_TYPES.FOLLOWUP_UPDATED,
-      description: `Updated follow-up status to ${data.status || updatedFollowUp.status}`,
+      description,
       performedBy: user._id
     });
 

@@ -85,7 +85,8 @@ function LeadsIndex() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  const initialExpanded = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("expanded") : null;
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(initialExpanded);
 
   useEffect(() => {
     const handleAdd = () => setRefreshCount(c => c + 1);

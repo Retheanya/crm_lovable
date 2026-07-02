@@ -283,10 +283,11 @@ export const ApiService = {
     return res.data;
   },
 
-  createFollowUp: async (leadId: string, data: Partial<FollowUp>) => {
+  createFollowUp: async (leadId: string, data: Partial<FollowUp> & { priority?: string }) => {
     const payload = {
       followUpDate: data.due,
-      notes: data.notes
+      notes: data.notes,
+      priority: data.priority || 'MEDIUM'
     };
     const res = await apiClient.post(`/leads/${leadId}/followups`, payload);
     return res.data.data;

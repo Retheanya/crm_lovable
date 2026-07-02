@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { FOLLOW_UP_STATUS } = require('../constants');
+const { FOLLOW_UP_STATUS, FOLLOW_UP_PRIORITY } = require('../constants');
 
 const followUpSchema = new mongoose.Schema({
   leadId: {
@@ -19,6 +19,11 @@ const followUpSchema = new mongoose.Schema({
     type: String,
     enum: Object.values(FOLLOW_UP_STATUS),
     default: FOLLOW_UP_STATUS.PENDING
+  },
+  priority: {
+    type: String,
+    enum: Object.values(FOLLOW_UP_PRIORITY),
+    default: FOLLOW_UP_PRIORITY.MEDIUM
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
